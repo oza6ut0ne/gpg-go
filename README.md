@@ -137,7 +137,10 @@ passphrase input (omitting it is an error).
 `--gen-key` / `--full-generate-key` (interactive), `--quick-gen-key`
 (non-interactive; algorithms are `default`/`ed25519` (Ed25519+Cv25519, the
 default) and `rsa2048`/`rsa3072`/`rsa4096`, with EXPIRE argument support),
-`-k/--list-keys`, `-K/--list-secret-keys`, `--fingerprint`,
+`-k/--list-keys`, `-K/--list-secret-keys` (matches real gpg's own
+"sec#"/"ssb#" — no private-keys-v1.d entry at all, e.g. a secret key
+removed from the machine — and "sec>"/"ssb>" — a smartcard stub —
+status markers), `--fingerprint`,
 `--with-subkey-fingerprints`, `--with-keygrip`, `--export`,
 `--export-secret-keys`, `--import`, `--delete-key`,
 `--delete-secret-key`, `--delete-secret-and-public-key`

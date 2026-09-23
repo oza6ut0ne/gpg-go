@@ -98,6 +98,11 @@ type ListOptions struct {
 	// and under every subkey it can be computed for (gpg's
 	// --with-keygrip).
 	WithKeygrip bool
+	// SecretStatus, if non-nil, is consulted for each primary/subkey
+	// packet (only meaningful when secret is true) to print gpg's own
+	// "#" (no secret key material available) / ">" (on a smartcard)
+	// marker right after "sec"/"ssb". A 0 return means no marker.
+	SecretStatus func(pk *packet.PublicKey) byte
 }
 
 // PrintKeyList prints a gpg-style listing of the given keys.
@@ -115,7 +120,7 @@ func PrintKeyList(w *strings.Builder, keys []*crypto.Key, secret bool, opts List
 
 		created := primary.CreationTime.Format("2006-01-02")
 		usage := usageFlags(ident.SelfSignature)
-		line := fmt.Sprintf("%s   %s %s", pubLabel, algoName(primary), created)
+		line := fmt.Sprintf("%s  %s %s", keyLabel(pubLabel, secret, opts, primary), algoName(primary), created)
 		if usage != "" {
 			line += " [" + usage + "]"
 		}
@@ -136,7 +141,7 @@ func PrintKeyList(w *strings.Builder, keys []*crypto.Key, secret bool, opts List
 		for _, sub := range e.Subkeys {
 			subCreated := sub.PublicKey.CreationTime.Format("2006-01-02")
 			subUsage := usageFlags(sub.Sig)
-			subLine := fmt.Sprintf("%s   %s %s", subLabel, algoName(sub.PublicKey), subCreated)
+			subLine := fmt.Sprintf("%s  %s %s", keyLabel(subLabel, secret, opts, sub.PublicKey), algoName(sub.PublicKey), subCreated)
 			if subUsage != "" {
 				subLine += " [" + subUsage + "]"
 			}
@@ -150,6 +155,21 @@ func PrintKeyList(w *strings.Builder, keys []*crypto.Key, secret bool, opts List
 		}
 		fmt.Fprintln(w)
 	}
+}
+
+// keyLabel returns label ("sec"/"ssb"/"pub"/"sub") with gpg's own status
+// marker ('#' for no available secret material, '>' for a smartcard)
+// appended when applicable, or a plain trailing space when there's
+// none — so the column that follows always starts at the same offset
+// whether or not a marker is shown.
+func keyLabel(label string, secret bool, opts ListOptions, pk *packet.PublicKey) string {
+	marker := byte(' ')
+	if secret && opts.SecretStatus != nil {
+		if m := opts.SecretStatus(pk); m != 0 {
+			marker = m
+		}
+	}
+	return label + string(marker)
 }
 
 func printKeygrip(w *strings.Builder, pk *packet.PublicKey) {

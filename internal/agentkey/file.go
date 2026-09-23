@@ -161,6 +161,43 @@ func ReadFile(path string) (*Key, error) {
 	return Parse(data)
 }
 
+// Tag returns the outer S-expression tag of a private-keys-v1.d file —
+// "private-key", "protected-private-key", or "shadowed-private-key" (a
+// smartcard stub, which Parse/FromNode doesn't understand and would
+// reject) — without parsing or validating the rest of its structure.
+// Used to classify a key file (e.g. for -K's "#"/">" status markers)
+// when the caller only needs to know its kind.
+//
+// Most files have gpg-agent's usual "Created: <ts>\nKey: <sexp>" text
+// wrapper, but a card's shadow stub (as gpg-agent itself writes it) has
+// none — it's the bare canonical S-expression starting at byte 0 — so
+// this only looks for the "Key: " marker as a possible prefix to skip
+// past, falling back to parsing from the start of data if it's absent.
+func Tag(data []byte) (string, error) {
+	const marker = "Key: "
+	rest := data
+	if idx := bytes.Index(data, []byte(marker)); idx != -1 {
+		rest = data[idx+len(marker):]
+	}
+	node, _, err := sexp.Parse(rest)
+	if err != nil {
+		return "", fmt.Errorf("agentkey: parsing s-expression: %w", err)
+	}
+	if !node.IsList() || node.Len() < 1 || !node.Get(0).IsAtom() {
+		return "", fmt.Errorf("agentkey: invalid key s-expression")
+	}
+	return node.Get(0).Str(), nil
+}
+
+// ReadFileTag reads path and returns its Tag.
+func ReadFileTag(path string) (string, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return "", err
+	}
+	return Tag(data)
+}
+
 // WriteFile writes k to path (mode 0600, creating parent dirs as needed).
 func WriteFile(path string, k *Key) error {
 	return os.WriteFile(path, k.Serialize(), 0o600)

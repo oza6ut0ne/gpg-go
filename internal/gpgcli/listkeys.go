@@ -31,11 +31,15 @@ func cmdListKeys(o *Options, secret bool) error {
 		return nil
 	}
 
-	var sb strings.Builder
-	keystore.PrintKeyList(&sb, keys, secret, keystore.ListOptions{
+	opts := keystore.ListOptions{
 		ShowSubkeyFingerprint: o.Fingerprint || o.WithSubkeyFingerprints,
 		WithKeygrip:           o.WithKeygrip,
-	})
+	}
+	if secret {
+		opts.SecretStatus = store.SecretKeyStatus
+	}
+	var sb strings.Builder
+	keystore.PrintKeyList(&sb, keys, secret, opts)
 	fmt.Print(sb.String())
 	return nil
 }

@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/ProtonMail/go-crypto/openpgp/packet"
 	"github.com/ProtonMail/gopenpgp/v2/crypto"
 	"github.com/oza6ut0ne/gpg-go/internal/agentkey"
 	"github.com/oza6ut0ne/gpg-go/internal/kbx"
@@ -107,6 +108,27 @@ func (s *Store) SecretKeys() []*crypto.Key {
 		}
 	}
 	return out
+}
+
+// SecretKeyStatus reports the -K listing status marker for a single
+// primary/subkey packet's own private-keys-v1.d entry, matching real
+// gpg's "sec#"/"ssb#" (no entry at all — the secret key is known but
+// unavailable, e.g. removed from the machine) and "sec>"/"ssb>" (the
+// entry is a smartcard stub — the secret key lives on a card) markers.
+// Returns 0 (no marker) if pk has ordinary local secret material.
+func (s *Store) SecretKeyStatus(pk *packet.PublicKey) byte {
+	grip, ok := opsutil.KeygripForPublicKey(pk)
+	if !ok {
+		return '#'
+	}
+	tag, err := agentkey.ReadFileTag(filepath.Join(s.privDir, grip+".key"))
+	if err != nil {
+		return '#'
+	}
+	if tag == "shadowed-private-key" {
+		return '>'
+	}
+	return 0
 }
 
 // AddPublic merges k's public key material into the keybox, replacing
