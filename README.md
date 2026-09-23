@@ -6,7 +6,16 @@ it, `ProtonMail/go-crypto`). Option names and behavior match real GnuPG as
 closely as possible, but only the subset of functionality used in everyday
 work is implemented (see "Implementation coverage" below for details).
 
-## Build
+## Install
+
+```sh
+go install github.com/oza6ut0ne/gpg-go@latest
+```
+
+This installs the `gpg-go` binary into `$(go env GOPATH)/bin` (or
+`$(go env GOBIN)` if set) — make sure that directory is on your `PATH`.
+
+### Build from source
 
 ```sh
 go build -o gpg-go .
